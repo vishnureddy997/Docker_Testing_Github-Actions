@@ -5,16 +5,11 @@ on:
       - main
       - mybranch
 
-# env:
-#   MY_KEY: ${{ secrets.MY_KEY  }}
-
-# This workflow install dependency and deployment on s3 bucket
 jobs:
   CheckBranch:
     name: Test Branch
     runs-on: ubuntu-latest
 
-    # Setting build timeout .
     timeout-minutes: 2
 
     steps:
@@ -22,22 +17,20 @@ jobs:
         uses: trstringer/manual-approval@v1
         with:
           secret: ${{ github.TOKEN }}
-          approvers: Hrithikwmp , Hrithik50
-          minimum-approvals: 1
-        if: github.ref == 'refs/heads/main'
- Check_container_status:
-    needs: [CheckBranch, Build_Deploy_Dev]
+
+  Check_container_status:
+    needs: [CheckBranch]
     runs-on: ubuntu-latest
     steps:
       - name: Login into EC2 using SSH
         env:
-          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY  }}
-          HOSTNAME: ${{ secrets.HOSTNAME  }}
-          USER_NAME: ${{ secrets.USERNAME  }}
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          HOSTNAME: ${{ secrets.HOSTNAME }}
+          USER_NAME: ${{ secrets.USERNAME }}
         run: |
           echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
           ssh -i private_key -o 'StrictHostKeyChecking=no' ${USER_NAME}@${HOSTNAME} "
-          if [ \"\$(docker inspect -f '{{.State.Restarting}}' <YOUR_CONTAINER_NAME>)\" == \"true\" ]; then
+          if [ \"\$(docker inspect -f '{{.State.Restarting}}' eager_cray\" == \"true\" ]; then
             echo \"Container is restarting\"
             exit 1
           else
