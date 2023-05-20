@@ -12,12 +12,6 @@ jobs:
 
     timeout-minutes: 2
 
-    steps:
-      - name: Take manual approval for master branch
-        uses: trstringer/manual-approval@v1
-        with:
-          secret: ${{ github.TOKEN }}
-
   Check_container_status:
     needs: [CheckBranch]
     runs-on: ubuntu-latest
