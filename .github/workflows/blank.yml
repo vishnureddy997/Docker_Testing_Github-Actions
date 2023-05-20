@@ -1,36 +1,45 @@
-# This is a basic workflow to help you get started with Actions
-
-name: CI
-
-# Controls when the workflow will run
+name: cxo-ui pipeline
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
+      - mybranch
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+# env:
+#   MY_KEY: ${{ secrets.MY_KEY  }}
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+# This workflow install dependency and deployment on s3 bucket
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  CheckBranch:
+    name: Test Branch
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
+    # Setting build timeout .
+    timeout-minutes: 2
+
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
-
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Take manual approval for master branch
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: Hrithikwmp , Hrithik50
+          minimum-approvals: 1
+        if: github.ref == 'refs/heads/main'
+ Check_container_status:
+    needs: [CheckBranch, Build_Deploy_Dev]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login into EC2 using SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY  }}
+          HOSTNAME: ${{ secrets.HOSTNAME  }}
+          USER_NAME: ${{ secrets.USERNAME  }}
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
+          ssh -i private_key -o 'StrictHostKeyChecking=no' ${USER_NAME}@${HOSTNAME} "
+          if [ \"\$(docker inspect -f '{{.State.Restarting}}' <YOUR_CONTAINER_NAME>)\" == \"true\" ]; then
+            echo \"Container is restarting\"
+            exit 1
+          else
+            echo \"Container is running\"
+          fi "
