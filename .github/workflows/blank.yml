@@ -1,32 +1,32 @@
-name: cxo-ui pipeline
+name: Check Container Status
 on:
-  push:
-    branches:
-      - main
-      - mybranch
+  workflow_dispatch:
+    inputs:
+      container_name:
+        description: 'Name of the container'
+        required: true
 
 jobs:
-  CheckBranch:
-    name: Test Branch
+  check_container_status:
     runs-on: ubuntu-latest
 
-    timeout-minutes: 2
-
-  Check_container_status:
-    needs: [CheckBranch]
-    runs-on: ubuntu-latest
     steps:
-      - name: Login into EC2 using SSH
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Check Container Status
         env:
-          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
-          HOSTNAME: ${{ secrets.HOSTNAME }}
-          USER_NAME: ${{ secrets.USERNAME }}
+          CONTAINER_NAME: ${{ github.event.inputs.container_name }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
         run: |
-          echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
-          ssh -i private_key -o 'StrictHostKeyChecking=no' ${USER_NAME}@${HOSTNAME} "
-          if [ \"\$(docker inspect -f '{{.State.Restarting}}' eager_cray\" == \"true\" ]; then
-            echo \"Container is restarting\"
-            exit 1
-          else
+          echo "$SSH_PRIVATE_KEY" > private_key
+          chmod 600 private_key
+          ssh -i private_key -o 'StrictHostKeyChecking=no' ${SSH_USERNAME}@${SSH_HOST} "
+          if [ \"\$(docker inspect -f '{{.State.Status}}' eager_cray\" == \"running\" ]; then
             echo \"Container is running\"
-          fi "
+          else
+            echo \"Container is not running\"
+            exit 1
+          fi"
