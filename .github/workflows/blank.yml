@@ -12,25 +12,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set up SSH connection
-        uses: webfactory/ssh-agent@v0.5.2
+      - name: SSH into server and check container status
+        uses: appleboy/ssh-action@master
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Retrieve Container ID and Status
-        run: |
-          # Replace with your SSH command to retrieve the container ID and status
-          # Example:
-          ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} ubuntu@3.16.143.82 "CONTAINER_ID=\$(docker ps -qf 'name=some-nginx')
-          CONTAINER_STATUS=\$(docker inspect -f '{{.State.Status}}' \$CONTAINER_ID)
-          echo \"::set-output name=container_id::\$CONTAINER_ID\"
-          echo \"::set-output name=container_status::\$CONTAINER_STATUS\"          
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            # Replace with your SSH command to retrieve the container ID and status
+            # Example:
+            CONTAINER_ID=$(docker ps -qf "name=some-nginx")
+            CONTAINER_STATUS=$(docker inspect -f '{{.State.Status}}' $CONTAINER_ID)
+            echo "::set-output name=container_id::$CONTAINER_ID"
+            echo "::set-output name=container_status::$CONTAINER_STATUS"
 
       - name: Check Container Status
         run: |
           # Retrieve the container ID and status from the previous step output
-          CONTAINER_ID=${{ steps.retrieve.outputs.container_id }}
-          CONTAINER_STATUS=${{ steps.retrieve.outputs.container_status }}
+          CONTAINER_ID=${{ steps.check_container.outputs.container_id }}
+          CONTAINER_STATUS=${{ steps.check_container.outputs.container_status }}
 
           echo "Container ID: $CONTAINER_ID"
           echo "Container Status: $CONTAINER_STATUS"
