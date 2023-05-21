@@ -13,7 +13,7 @@ jobs:
       - name: Check Container Status
         run: |
           # Check if the Docker container is running
-          if docker inspect -f '{{.State.Running}}' eager_cray; then
+          if sudo docker inspect -f '{{.State.Running}}' eager_cray; then
             echo "Container is running"
             # Additional steps or actions to perform if the container is running
           else
