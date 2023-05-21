@@ -1,32 +1,22 @@
 name: Check Container Status
 on:
   workflow_dispatch:
-    inputs:
-      container_name:
-        description: 'Name of the container'
-        required: true
 
 jobs:
   check_container_status:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
       - name: Check Container Status
-        env:
-          CONTAINER_NAME: ${{ github.event.inputs.container_name }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
         run: |
-          echo "$SSH_PRIVATE_KEY" > private_key
-          chmod 600 private_key
-          ssh -i private_key -o 'StrictHostKeyChecking=no' ${SSH_USERNAME}@${SSH_HOST} "
-          if [ \"\$(docker inspect -f '{{.State.Status}}' eager_cray\" == \"running\" ]; then
-            echo \"Container is running\"
+          # Check if the Docker container is running
+          if docker inspect -f '{{.State.Running}}' eager_cray; then
+            echo "Container is running"
+            # Additional steps or actions to perform if the container is running
           else
-            echo \"Container is not running\"
-            exit 1
-          fi"
+            echo "Container is not running"
+            # Additional steps or actions to perform if the container is not running
+          fi
