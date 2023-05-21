@@ -1,10 +1,8 @@
-name: Check Container Status
+name: GitOps - Check Container Status
 on:
-  workflow_dispatch:
-    inputs:
-      container_name:
-        description: 'Name of the container'
-        required: true
+  push:
+    branches:
+      - main
 
 jobs:
   check_container_status:
@@ -14,19 +12,34 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Check Container Status
-        env:
-          CONTAINER_NAME: ${{ github.event.inputs.container_name }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+      - name: Set up SSH connection
+        uses: webfactory/ssh-agent@v0.5.2
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Retrieve Container ID and Status
         run: |
-          echo "$SSH_PRIVATE_KEY" > private_key
-          chmod 600 private_key
-          ssh -i private_key -o 'StrictHostKeyChecking=no' ${SSH_USERNAME}@${SSH_HOST} "
-          if [ \"\$(docker inspect -f '{{.State.Status}}' ${CONTAINER_NAME})\" == \"running\" ]; then
-            echo \"Container is running\"
+          # Replace with your SSH command to retrieve the container ID and status
+          # Example:
+          ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} ubuntu@3.16.143.82 "CONTAINER_ID=\$(docker ps -qf 'name=some-nginx')
+          CONTAINER_STATUS=\$(docker inspect -f '{{.State.Status}}' \$CONTAINER_ID)
+          echo \"::set-output name=container_id::\$CONTAINER_ID\"
+          echo \"::set-output name=container_status::\$CONTAINER_STATUS\"          
+
+      - name: Check Container Status
+        run: |
+          # Retrieve the container ID and status from the previous step output
+          CONTAINER_ID=${{ steps.retrieve.outputs.container_id }}
+          CONTAINER_STATUS=${{ steps.retrieve.outputs.container_status }}
+
+          echo "Container ID: $CONTAINER_ID"
+          echo "Container Status: $CONTAINER_STATUS"
+
+          # Additional steps or actions based on the container status
+          if [[ $CONTAINER_STATUS == "running" ]]; then
+            echo "Container is running"
+            # Additional steps or actions to perform if the container is running
           else
-            echo \"Container is not running\"
-            exit 1
-          fi"
+            echo "Container is not running"
+            # Additional steps or actions to perform if the container is not running
+          fi
